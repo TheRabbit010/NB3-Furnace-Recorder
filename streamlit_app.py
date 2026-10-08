@@ -51,7 +51,7 @@ uploaded_files = st.sidebar.file_uploader(
 
 st.title("🏭 Recorder NB3 Furnace")
 
-# 4. Flexible File Parsing Function พร้อมระบบตรวจเช็คไฟล์ RECORDER NB3
+# 4. Flexible File Parsing Function พร้อมระบบตรวจเช็คไฟล์ RECORDER NB3 แบบละเอียด
 def parse_single_file(uploaded_file):
     uploaded_file.seek(0)
     raw_bytes = uploaded_file.read()
@@ -70,26 +70,23 @@ def parse_single_file(uploaded_file):
 
     lines = text_content.splitlines()
     
-    # 🔍 ตรวจสอบเบื้องต้นว่าเป็นไฟล์ RECORDER NB3 หรือไม่
     endheader_cols = []
-    for line in lines[:100]:
+    for line in lines[:150]:
         line_str = line.strip()
         if line_str.startswith("#EndHeader"):
             endheader_cols = [x.strip() for x in line_str.split(",")]
             break
 
-    # นับจำนวน Channel (TH_CH) จาก Header
-    ch_count = 0
-    if endheader_cols:
-        ch_count = sum(1 for col in endheader_cols if "TH_CH" in col.upper() or "CH" in col.upper())
-    else:
-        # Fallback: ค้นหารูปแบบช่องสัญญาณ TH_CH ในไฟล์
-        ch_matches = re.findall(r'\d+\)?TH_CH\d+|TH_CH\d+', text_content[:5000], re.IGNORECASE)
-        ch_count = len(ch_matches)
-
-    # ⚠️ เงื่อนไขตรวจสอบ: NB3 ต้องมีอย่างน้อย 10 Channels ขึ้นไป (NB1 มักมีไม่เกิน 6 Channels)
-    if ch_count < 10:
-        return None  # คืนค่า None หากไม่ใช่ไฟล์ RECORDER NB3
+    # 🔍 ตรวจสอบโครงสร้างคอลัมน์เฉพาะของ RECORDER NB3
+    # NB3 จะต้องมีอย่างน้อย Top Zone #6, #7 หรือ Bottom Zone #6, #7 (ซึ่งเตาอื่นเช่น NB1 จะไม่มี)
+    header_str = " ".join(endheader_cols) if endheader_cols else text_content[:10000]
+    
+    has_top_z6_z7 = bool(re.search(r'1\)TH_CH6', header_str, re.I)) and bool(re.search(r'1\)TH_CH7', header_str, re.I))
+    has_bot_z6_z7 = bool(re.search(r'2\)TH_CH6', header_str, re.I)) and bool(re.search(r'2\)TH_CH7', header_str, re.I))
+    
+    # ถ้าไม่มี Top Zone 6-7 หรือ Bottom Zone 6-7 ให้ปฏิเสธทันทีว่าเป็นไม่ใช่ไฟล์ NB3
+    if not (has_top_z6_z7 or has_bot_z6_z7):
+        return None
 
     data_rows = []
     date_regex = re.compile(r'^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}')
@@ -98,10 +95,7 @@ def parse_single_file(uploaded_file):
 
     for line in lines:
         line_str = line.strip()
-        if not line_str:
-            continue
-
-        if line_str.startswith("#EndHeader"):
+        if not line_str or line_str.startswith("#EndHeader"):
             continue
 
         if date_regex.match(line_str) and "," not in line_str:
@@ -191,11 +185,11 @@ def process_multiple_files(uploaded_files):
     if invalid_files:
         invalid_file_names = ", ".join(f"'{name}'" for name in invalid_files)
         st.error(
-            f"⚠️ **ไม่สามารถประมวลผลได้:** พบไฟล์ที่ไม่ใช่รูปแบบของ RECORDER NB3 ได้แก่ {invalid_file_names}\n\n"
-            f"📌 *เนื่องจากไฟล์ดังกล่าวมีจำนวน Channels ไม่ถึงเกณฑ์ของ NB3 (เช่น ไฟล์ NB1 มีไม่ถึง 6 Channels)*\n\n"
-            f"กรุณากดปุ่ม **'🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด'** ด้านซ้าย แล้วเลือกอัปโหลดเฉพาะไฟล์ RECORDER NB3 อีกครั้ง"
+            f"❌ **ตรวจพบไฟล์ที่ไม่ใช่ RECORDER NB3:** {invalid_file_names}\n\n"
+            f"📌 *สาเหตุ:* โครงสร้างคอลัมน์ไม่ตรงตามมาตรฐานของ RECORDER NB3 (ขาดคอลัมน์ Top/Bottom Zone #6 และ #7)\n\n"
+            f"กรุณากดปุ่ม **'🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด'** ด้านซ้าย แล้วเลือกอัปโหลดไฟล์ใหม่อีกครั้ง"
         )
-        st.stop()  # หยุดการทำงานทันที
+        st.stop()  # หยุดการทำงานทันที ไม่วาดกราฟ
 
     if not combined_dfs:
         return pd.DataFrame()

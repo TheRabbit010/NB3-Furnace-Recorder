@@ -5,7 +5,7 @@ import streamlit as st
 import re
 import io
 
-# 1. Page Config (บังคับให้ Sidebar กางออกเสมอเมื่อเปิดครั้งแรก)
+# 1. Page Config
 st.set_page_config(
     page_title="Recorder NB3 Furnace",
     page_icon="🏭",
@@ -57,69 +57,41 @@ else:
     c_card = "#ffffff"
     c_accent = "#F0B90B"
 
-# Dynamic CSS Injection (แก้ปัญหาปุ่ม Sidebar หาย และจัดสไตล์ใหม่ให้ปลอดภัยขึ้น)
+# 🌟 CSS แบบเรียบง่ายที่สุด เพื่อไม่ให้กระทบปุ่มระบบของ Streamlit
 st.markdown(f"""
     <style>
-        /* ทำให้ Header โปร่งใส (แต่ไม่ซ่อนปุ่ม) */
+        /* จัดการสี Header และปุ่ม Sidebar ให้เข้ากับพื้นหลัง */
         header[data-testid="stHeader"] {{
-            background-color: transparent !important;
+            background-color: {c_bg} !important;
         }}
         
-        /* ==========================================
-           🌟 แก้ปัญหา Sidebar หาย / ปุ่ม Toggle ล่องหน 
-           ========================================== */
-        /* บังคับให้ปุ่มเปิด Sidebar (มุมซ้ายบน) แสดงผลเป็นกล่องชัดเจนเสมอ */
-        [data-testid="collapsedControl"] {{
-            display: flex !important;
-            visibility: visible !important;
-            z-index: 1000000 !important;
-            background-color: {c_btn_bg} !important;
-            border: 1px solid {c_accent} !important;
-            border-radius: 8px !important;
-            margin: 15px !important;
-            padding: 2px !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
-        }}
-        
-        /* สีของไอคอนลูกศร เปิด/ปิด Sidebar */
-        [data-testid="collapsedControl"] svg,
-        [data-testid="stSidebarCollapseButton"] svg {{
+        /* บังคับสีปุ่มเปิด-ปิด (SVG) ให้เป็นสีเหลืองทอง (เพื่อให้มองเห็นชัดเสมอ) */
+        header[data-testid="stHeader"] svg {{
             fill: {c_accent} !important;
             color: {c_accent} !important;
         }}
-        
-        /* เมื่อเอาเมาส์ชี้ปุ่มเปิด/ปิด */
-        [data-testid="collapsedControl"]:hover,
-        [data-testid="stSidebarCollapseButton"]:hover {{
-            background-color: {c_accent} !important;
-        }}
-        [data-testid="collapsedControl"]:hover svg,
-        [data-testid="stSidebarCollapseButton"]:hover svg {{
-            fill: #000000 !important;
-            color: #000000 !important;
-        }}
-        /* ========================================== */
-        
-        /* ซ่อนเมนู Deploy/Settings มุมขวาบนอย่างปลอดภัย */
+
+        /* ซ่อนเมนู Deploy มุมขวาบน */
         [data-testid="stToolbar"] {{ visibility: hidden !important; }}
         #MainMenu, footer {{ display: none !important; }}
         
-        /* สีพื้นหลังและตัวอักษรหลักของแอป */
-        html, body, .stApp, [data-testid="stAppViewContainer"] {{
+        /* จัดการสีพื้นหลังแอปหลัก */
+        .stApp {{
             background-color: {c_bg} !important; 
-            color: {c_text} !important;
         }}
         
-        /* สีพื้นหลัง Sidebar */
+        /* จัดการสีตัวอักษรทั้งหมด */
+        html, body, [data-testid="stAppViewContainer"], .stMarkdown, h1, h2, h3, h4, p, span, label {{
+            color: {c_text} !important; 
+        }}
+        
+        /* จัดการสี Sidebar */
         [data-testid="stSidebar"] {{ 
             background-color: {c_sidebar} !important;
             border-right: 1px solid {c_border} !important;
         }}
-        .stMarkdown, h1, h2, h3, h4, p, span, label {{ 
-            color: {c_text} !important; 
-        }}
         
-        /* ปุ่มใน Sidebar */
+        /* ปรับแต่งปุ่มภายใน Sidebar */
         [data-testid="stSidebar"] div.stButton > button {{
             background-color: {c_btn_bg} !important; 
             color: {c_text} !important; 
@@ -155,7 +127,7 @@ st.markdown(f"""
             font-weight: bold !important;
         }}
         
-        /* Expander และ DataFrame */
+        /* กล่องขยายข้อมูล (Expander) และ ตาราง DataFrame */
         [data-testid="stExpander"], [data-testid="stDataFrame"] {{
             background-color: {c_card} !important; 
             border: 1px solid {c_border} !important; 
@@ -170,7 +142,7 @@ st.markdown(f"""
             color: {c_text} !important; 
         }}
         
-        /* Input และ Download Button */
+        /* กล่องข้อความ (Input) และปุ่มดาวน์โหลด */
         div[data-baseweb="input"], div[data-baseweb="input"] input {{
             background-color: {c_btn_bg} !important; 
             color: {c_text} !important; 
@@ -331,7 +303,7 @@ def to_excel_bytes(dataframe):
     output.seek(0)
     return output.getvalue()
 
-# 5. Chart Layout Styling (ปรับแต่งตาม Theme อัตโนมัติ)
+# 5. Chart Layout Styling
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
     is_dark = st.session_state.theme == "Dark Mode"
     

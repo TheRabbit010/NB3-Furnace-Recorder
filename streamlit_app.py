@@ -13,16 +13,43 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS: ลบการบังคับสีออกทั้งหมด เพื่อให้ Streamlit จัดการ Theming อัตโนมัติ (รองรับ System/Light/Dark 100%)
+# 2. CSS: จัดการเฉพาะเมนูส่วนเกิน และ เสริมความโดดเด่นให้ปุ่ม Sidebar 
 st.markdown("""
     <style>
-        /* ซ่อนเฉพาะเมนู Deploy มุมขวาบน และ Footer ที่กวนใจ */
-        [data-testid="stToolbar"] { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
+        /* ซ่อนเฉพาะเมนูขวาบนและ Footer */
+        [data-testid="stToolbar"] { visibility: hidden !important; display: none !important; }
+        footer { visibility: hidden !important; display: none !important; }
+        
+        /* 🌟 บังคับปุ่มลูกศรเปิด Sidebar (ซ้ายบน) ให้เป็นสีทองเด่นชัด 100% 🌟 */
+        [data-testid="collapsedControl"], 
+        header[data-testid="stHeader"] button {
+            background-color: #F0B90B !important; 
+            border-radius: 6px !important;
+            border: 1px solid #d1a00a !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            display: inline-flex !important;
+            z-index: 999999 !important;
+            margin: 10px !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        }
+        
+        /* เปลี่ยนสีไอคอนข้างในปุ่มให้เป็นสีดำ */
+        [data-testid="collapsedControl"] svg, 
+        header[data-testid="stHeader"] button svg {
+            fill: #000000 !important;
+            color: #000000 !important;
+        }
+        
+        /* เมื่อเอาเมาส์ชี้ให้ปุ่มสว่างขึ้น */
+        [data-testid="collapsedControl"]:hover, 
+        header[data-testid="stHeader"] button:hover {
+            background-color: #ffc926 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# Sidebar: เมนูอัปโหลดข้อมูล (ไม่มีการเลือกโหมดซ้ำซ้อนแล้ว)
+# Sidebar: เมนูอัปโหลดข้อมูล
 st.sidebar.header("📁 เมนูอัปโหลดข้อมูล")
 
 if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด", type="primary"):
@@ -167,7 +194,7 @@ def to_excel_bytes(dataframe):
     output.seek(0)
     return output.getvalue()
 
-# 4. Chart Layout Styling (แก้ไขให้กราฟเปลี่ยนสีตามระบบแบบอัตโนมัติ)
+# 4. Chart Layout Styling (ให้ Plotly จัดการสีเองตาม Theme ปัจจุบัน)
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
     layout_args = dict(
         hovermode="x unified",

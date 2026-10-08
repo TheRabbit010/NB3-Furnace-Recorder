@@ -5,7 +5,7 @@ import streamlit as st
 import re
 import io
 
-# 1. Page Config
+# 1. Page Config (ตั้งค่าหน้าเพจ รวมถึง Sidebar ให้อยู่ด้านซ้ายและกางออกเสมอ)
 st.set_page_config(
     page_title="Recorder NB3 Furnace",
     page_icon="🏭",
@@ -13,165 +13,133 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Dark Mode CSS (คืนค่าปุ่มลูกศรแบบดั้งเดิม แต่ให้เป็นสีขาว)
-st.markdown("""
-    <style>
-        /* 1. ตั้งค่า Header ให้โปร่งใส ไม่บังเนื้อหา */
-        header[data-testid="stHeader"] {
-            background-color: transparent !important;
-        }
-        
-        /* --- 🌟 2. ปุ่มเปิด-ปิด Sidebar แบบดั้งเดิม (Native) 🌟 --- */
-        /* ลบกรอบและพื้นหลังออก ให้เหลือแค่ตัวไอคอนเพียวๆ แบบในรูปตัวอย่าง */
-        [data-testid="collapsedControl"],
-        [data-testid="stSidebarCollapseButton"],
-        header[data-testid="stHeader"] button {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            z-index: 99999 !important;
-        }
-        
-        /* เปลี่ยนสีไอคอนลูกศร (<< และ >) ให้เป็นสีขาวล้วน */
-        [data-testid="collapsedControl"] svg,
-        [data-testid="stSidebarCollapseButton"] svg,
-        header[data-testid="stHeader"] button svg {
-            fill: #ffffff !important;
-            color: #ffffff !important;
-        }
-        
-        /* เมื่อเอาเมาส์ชี้ที่ปุ่มลูกศร ให้เป็นสีทอง */
-        [data-testid="collapsedControl"]:hover svg,
-        [data-testid="stSidebarCollapseButton"]:hover svg,
-        header[data-testid="stHeader"] button:hover svg {
-            fill: #F0B90B !important;
-            color: #F0B90B !important;
-        }
-        /* ------------------------------------- */
+# 2. ตั้งค่า State สำหรับ Theme (Dark / Bright Mode)
+if "theme" not in st.session_state:
+    st.session_state.theme = "Dark Mode"
 
-        /* 3. ซ่อนเฉพาะเมนูขวาบน (Deploy, Settings) */
-        [data-testid="stToolbar"] { display: none !important; }
-        #MainMenu { visibility: hidden !important; }
-        footer { visibility: hidden !important; }
+# Sidebar: ส่วนการตั้งค่าระบบและอัปโหลดไฟล์ (อยู่ด้านซ้ายมือ)
+st.sidebar.header("⚙️ การตั้งค่าระบบ")
+theme_mode = st.sidebar.radio(
+    "เลือกโหมดหน้าจอ:", 
+    ["Dark Mode", "Bright Mode"], 
+    index=0 if st.session_state.theme == "Dark Mode" else 1
+)
+st.session_state.theme = theme_mode
+
+st.sidebar.markdown("---")
+st.sidebar.header("📁 เมนูอัปโหลดข้อมูล")
+
+if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด"):
+    st.cache_data.clear()
+    st.rerun()
+
+uploaded_files = st.sidebar.file_uploader(
+    "อัปโหลดไฟล์ Recorder NB3 (.csv) ได้มากกว่า 1 ไฟล์", 
+    type=["csv"],
+    accept_multiple_files=True
+)
+
+# 3. Dynamic CSS สำหรับ Dark Mode และ Bright Mode
+if st.session_state.theme == "Dark Mode":
+    c_bg = "#0e1117"
+    c_sidebar = "#161b22"
+    c_text = "#ffffff"
+    c_btn_bg = "#21262d"
+    c_border = "#30363d"
+    c_card = "#161b22"
+    c_accent = "#F0B90B"
+    c_svg = "#ffffff"
+else:
+    c_bg = "#ffffff"
+    c_sidebar = "#f0f2f6"
+    c_text = "#000000"
+    c_btn_bg = "#ffffff"
+    c_border = "#cccccc"
+    c_card = "#ffffff"
+    c_accent = "#F0B90B"
+    c_svg = "#000000"
+
+st.markdown(f"""
+    <style>
+        /* Header โปร่งใส */
+        header[data-testid="stHeader"] {{ background-color: transparent !important; }}
         
-        /* 4. สีพื้นหลังหลักของแอป */
-        html, body, .stApp, [data-testid="stAppViewContainer"] {
-            background-color: #0e1117 !important;
-            color: #ffffff !important;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #161b22 !important;
-        }
-        .stMarkdown, h1, h2, h3, p, span, label {
-            color: #ffffff !important;
-        }
-        [data-testid="stSidebar"] div.stButton > button {
-            background-color: #21262d !important;
-            color: #ffffff !important;
-            border: 1px solid #F0B90B !important;
-            font-weight: bold !important;
-            width: 100% !important;
-            padding: 8px 16px !important;
-        }
-        [data-testid="stSidebar"] div.stButton > button:hover {
-            background-color: #F0B90B !important;
-            color: #000000 !important;
-        }
-        [data-testid="stFileUploader"] {
-            background-color: #161b22 !important;
-            border: 1.5px solid #F0B90B !important;
-            border-radius: 8px !important;
-            padding: 10px !important;
-        }
-        [data-testid="stFileUploader"] section {
-            background-color: #1c2128 !important;
-            border: 1px dashed #F0B90B !important;
-            border-radius: 6px !important;
-        }
-        [data-testid="stFileUploader"] section div, 
-        [data-testid="stFileUploader"] section span,
-        [data-testid="stFileUploader"] section small {
-            color: #e6edf3 !important;
-        }
-        [data-testid="stFileUploaderFileData"],
-        [data-testid="stFileUploaderFileData"] > div,
-        [data-testid="stFileUploaderFile"] {
-            background-color: #21262d !important;
-            border: 1px solid #F0B90B !important;
-            border-radius: 6px !important;
-        }
-        [data-testid="stFileUploaderFileData"] *,
-        [data-testid="stFileUploaderFile"] * {
-            color: #ffffff !important;
-            font-weight: bold !important;
-        }
-        [data-testid="stExpander"] {
-            background-color: #161b22 !important;
-            border: 1px solid #30363d !important;
-            border-radius: 8px !important;
-        }
-        [data-testid="stExpander"] details summary {
-            background-color: #21262d !important;
-            color: #ffffff !important;
-            border-radius: 8px !important;
-        }
-        [data-testid="stExpander"] details summary * {
-            color: #ffffff !important;
-        }
-        [data-testid="stDataFrame"] {
-            background-color: #161b22 !important;
-            border: 1px solid #30363d !important;
-            border-radius: 8px !important;
-        }
-        div[data-testid="stDataFrame"] div[role="grid"] {
-            background-color: #161b22 !important;
-            color: #ffffff !important;
-        }
-        div[data-testid="stDataFrame"] div[role="columnheader"] {
-            background-color: #21262d !important;
-            color: #ffffff !important;
-        }
-        div[data-baseweb="input"] {
-            background-color: #21262d !important;
-            border: 1px solid #30363d !important;
-            color: #ffffff !important;
-            border-radius: 6px !important;
-        }
-        div[data-baseweb="input"] input {
-            background-color: #21262d !important;
-            color: #ffffff !important;
-        }
-        div.stDownloadButton > button {
-            background-color: #21262d !important;
-            border: 1.5px solid #F0B90B !important;
-            border-radius: 6px !important;
-            padding: 8px 16px !important;
-            transition: all 0.2s ease-in-out;
-        }
-        div.stDownloadButton > button, 
-        div.stDownloadButton > button *,
-        div.stDownloadButton > button p,
-        div.stDownloadButton > button span {
-            color: #ffffff !important;
-            font-weight: bold !important;
-            font-size: 15px !important;
-        }
-        div.stDownloadButton > button:hover {
-            background-color: #F0B90B !important;
-            border-color: #F0B90B !important;
-        }
-        div.stDownloadButton > button:hover,
-        div.stDownloadButton > button:hover *,
-        div.stDownloadButton > button:hover p,
-        div.stDownloadButton > button:hover span {
-            color: #000000 !important;
-        }
+        /* ปุ่มเปิด-ปิด Sidebar */
+        [data-testid="collapsedControl"], [data-testid="stSidebarCollapseButton"], header[data-testid="stHeader"] button {{
+            background: transparent !important; border: none !important; box-shadow: none !important; z-index: 99999 !important;
+        }}
+        [data-testid="collapsedControl"] svg, [data-testid="stSidebarCollapseButton"] svg, header[data-testid="stHeader"] button svg {{
+            fill: {c_svg} !important; color: {c_svg} !important;
+        }}
+        [data-testid="collapsedControl"]:hover svg, [data-testid="stSidebarCollapseButton"]:hover svg, header[data-testid="stHeader"] button:hover svg {{
+            fill: {c_accent} !important; color: {c_accent} !important;
+        }}
+        
+        /* ซ่อนเมนู Deploy/Settings มุมขวาบน */
+        [data-testid="stToolbar"] {{ display: none !important; }}
+        #MainMenu, footer {{ visibility: hidden !important; }}
+        
+        /* สีพื้นหลังและตัวอักษรหลัก */
+        html, body, .stApp, [data-testid="stAppViewContainer"] {{
+            background-color: {c_bg} !important; color: {c_text} !important;
+        }}
+        [data-testid="stSidebar"] {{ background-color: {c_sidebar} !important; }}
+        .stMarkdown, h1, h2, h3, p, span, label {{ color: {c_text} !important; }}
+        
+        /* ปุ่มใน Sidebar */
+        [data-testid="stSidebar"] div.stButton > button {{
+            background-color: {c_btn_bg} !important; color: {c_text} !important; border: 1px solid {c_accent} !important;
+            font-weight: bold !important; width: 100% !important; padding: 8px 16px !important;
+        }}
+        [data-testid="stSidebar"] div.stButton > button:hover {{
+            background-color: {c_accent} !important; color: #000000 !important;
+        }}
+        
+        /* กล่องอัปโหลดไฟล์ */
+        [data-testid="stFileUploader"] {{
+            background-color: {c_sidebar} !important; border: 1.5px solid {c_accent} !important; border-radius: 8px !important; padding: 10px !important;
+        }}
+        [data-testid="stFileUploader"] section {{
+            background-color: {c_btn_bg} !important; border: 1px dashed {c_accent} !important; border-radius: 6px !important;
+        }}
+        [data-testid="stFileUploader"] section div, [data-testid="stFileUploader"] section span, [data-testid="stFileUploader"] section small {{
+            color: {c_text} !important;
+        }}
+        [data-testid="stFileUploaderFileData"], [data-testid="stFileUploaderFile"] {{
+            background-color: {c_btn_bg} !important; border: 1px solid {c_accent} !important; border-radius: 6px !important;
+        }}
+        [data-testid="stFileUploaderFileData"] *, [data-testid="stFileUploaderFile"] * {{
+            color: {c_text} !important; font-weight: bold !important;
+        }}
+        
+        /* Expander และ DataFrame */
+        [data-testid="stExpander"], [data-testid="stDataFrame"] {{
+            background-color: {c_card} !important; border: 1px solid {c_border} !important; border-radius: 8px !important;
+        }}
+        [data-testid="stExpander"] details summary, div[data-testid="stDataFrame"] div[role="columnheader"] {{
+            background-color: {c_btn_bg} !important; color: {c_text} !important;
+        }}
+        div[data-testid="stDataFrame"] div[role="grid"] {{ background-color: {c_card} !important; color: {c_text} !important; }}
+        
+        /* Input และ Download Button */
+        div[data-baseweb="input"], div[data-baseweb="input"] input {{
+            background-color: {c_btn_bg} !important; color: {c_text} !important; border: 1px solid {c_border} !important; border-radius: 6px !important;
+        }}
+        div.stDownloadButton > button {{
+            background-color: {c_btn_bg} !important; border: 1.5px solid {c_accent} !important; border-radius: 6px !important;
+            padding: 8px 16px !important; transition: all 0.2s ease-in-out;
+        }}
+        div.stDownloadButton > button, div.stDownloadButton > button p {{
+            color: {c_text} !important; font-weight: bold !important; font-size: 15px !important;
+        }}
+        div.stDownloadButton > button:hover {{ background-color: {c_accent} !important; border-color: {c_accent} !important; }}
+        div.stDownloadButton > button:hover, div.stDownloadButton > button:hover p {{ color: #000000 !important; }}
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🏭 Recorder NB3 Furnace")
 
-# 3. Flexible File Parsing Function
+# 4. Flexible File Parsing Function
 def parse_single_file(uploaded_file):
     uploaded_file.seek(0)
     raw_bytes = uploaded_file.read()
@@ -189,13 +157,11 @@ def parse_single_file(uploaded_file):
         text_content = raw_bytes.decode('utf-8', errors='ignore')
 
     lines = text_content.splitlines()
-    
     endheader_cols = []
     data_rows = []
     
     date_regex = re.compile(r'^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}')
     time_regex = re.compile(r'^\d{1,2}:\d{2}:\d{2}')
-
     curr_date = ""
 
     for line in lines:
@@ -232,7 +198,6 @@ def parse_single_file(uploaded_file):
         return None
 
     df = pd.DataFrame()
-
     col0_str = data_df[0].astype(str).str.strip()
     df["DateTime"] = pd.to_datetime(col0_str, errors="coerce", dayfirst=True)
 
@@ -266,13 +231,10 @@ def parse_single_file(uploaded_file):
     # 4) Oxygen & N2 Flow
     c_o2_exit = find_col_by_keyword(r'3\)TH_CH4Max')
     df["Oxygen EXIT"] = extract_series(c_o2_exit, 2 + (17) * 3, min_val=0.0, max_val=2000.0)
-
     c_o2_ent = find_col_by_keyword(r'3\)TH_CH5Max')
     df["Oxygen ENTRANCE"] = extract_series(c_o2_ent, 2 + (18) * 3, min_val=0.0, max_val=2000.0)
-
     c_n2_exit = find_col_by_keyword(r'3\)TH_CH7Max')
     df["N2 Exit"] = extract_series(c_n2_exit, 2 + (20) * 3, min_val=0.0, max_val=20000.0)
-
     c_n2_ent = find_col_by_keyword(r'3\)TH_CH8Max')
     df["N2 Entrance"] = extract_series(c_n2_ent, 2 + (21) * 3, min_val=0.0, max_val=20000.0)
 
@@ -297,7 +259,6 @@ def process_multiple_files(uploaded_files):
     full_df = full_df.drop_duplicates(subset=["DateTime"]).sort_values("DateTime").reset_index(drop=True)
     return full_df
 
-# Function to convert DataFrame to Excel Bytes
 def to_excel_bytes(dataframe):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -308,17 +269,28 @@ def to_excel_bytes(dataframe):
     output.seek(0)
     return output.getvalue()
 
-# 4. Chart Layout Styling
+# 5. Chart Layout Styling (ปรับแต่งตาม Theme อัตโนมัติ)
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
+    is_dark = st.session_state.theme == "Dark Mode"
+    
+    p_bg = "#161b22" if is_dark else "#f8f9fa"
+    paper_bg = "#0e1117" if is_dark else "#ffffff"
+    font_c = "#FFFFFF" if is_dark else "#000000"
+    tick_c = "#CCCCCC" if is_dark else "#333333"
+    grid_c = "rgba(255,255,255,0.08)" if is_dark else "rgba(0,0,0,0.1)"
+    line_c = "#555555" if is_dark else "#cccccc"
+    leg_bg = "rgba(27, 31, 36, 0.95)" if is_dark else "rgba(255, 255, 255, 0.95)"
+    template = "plotly_dark" if is_dark else "plotly_white"
+
     layout_args = dict(
-        template="plotly_dark",
-        plot_bgcolor="#161b22",
-        paper_bgcolor="#0e1117",
+        template=template,
+        plot_bgcolor=p_bg,
+        paper_bgcolor=paper_bg,
         hovermode="x unified",
         showlegend=True,
         legend=dict(
-            font=dict(color="#FFFFFF", size=12, family="Arial Bold"),
-            bgcolor="rgba(27, 31, 36, 0.95)",
+            font=dict(color=font_c, size=12, family="Arial Bold"),
+            bgcolor=leg_bg,
             bordercolor="#F0B90B",
             borderwidth=1.5,
             orientation="v",
@@ -328,20 +300,20 @@ def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
             x=1.02
         ),
         xaxis=dict(
-            title=dict(text="Date & Time", font=dict(color="#FFFFFF", size=12)),
-            tickfont=dict(color="#CCCCCC", size=10),
+            title=dict(text="Date & Time", font=dict(color=font_c, size=12)),
+            tickfont=dict(color=tick_c, size=10),
             showgrid=True,
-            gridcolor="rgba(255,255,255,0.08)",
-            linecolor="#555555",
+            gridcolor=grid_c,
+            linecolor=line_c,
             type="date",
         ),
         yaxis=dict(
-            title=dict(text=y_title, font=dict(color="#FFFFFF", size=12)),
-            tickfont=dict(color="#CCCCCC", size=10),
+            title=dict(text=y_title, font=dict(color=font_c, size=12)),
+            tickfont=dict(color=tick_c, size=10),
             showgrid=True,
-            gridcolor="rgba(255,255,255,0.08)",
+            gridcolor=grid_c,
             zeroline=False,
-            linecolor="#555555",
+            linecolor=line_c,
         ),
         height=420,
         margin=dict(l=60, r=180, t=30, b=40),
@@ -351,20 +323,7 @@ def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
         
     fig.update_layout(**layout_args)
 
-# Sidebar File Upload
-st.sidebar.header("📁 เมนูอัปโหลดข้อมูล")
-
-if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด"):
-    st.cache_data.clear()
-    st.rerun()
-
-uploaded_files = st.sidebar.file_uploader(
-    "อัปโหลดไฟล์ Recorder NB3 (.csv) ได้มากกว่า 1 ไฟล์", 
-    type=["csv"],
-    accept_multiple_files=True
-)
-
-# 5. Main Content Area
+# 6. Main Content Area
 if uploaded_files:
     try:
         raw_df = process_multiple_files(uploaded_files)
@@ -373,9 +332,8 @@ if uploaded_files:
             st.error("⚠️ ไม่พบข้อมูลวันเวลา (DateTime) ที่ถูกต้องในไฟล์ที่อัปโหลด กรุณาตรวจสอบรูปแบบไฟล์ CSV")
         else:
             st.sidebar.success(f"รวมข้อมูลสำเร็จ {len(uploaded_files)} ไฟล์ ({len(raw_df)} แถว)")
-
             st.sidebar.markdown("---")
-            st.sidebar.header("🎛️ Dynamic Controls")
+            st.sidebar.header("🎛️ ตัวกรองกราฟ (Dynamic Controls)")
             
             min_time = raw_df["DateTime"].min().to_pydatetime()
             max_time = raw_df["DateTime"].max().to_pydatetime()
@@ -404,10 +362,7 @@ if uploaded_files:
                 top_colors = ["#FF0000", "#008000", "#0000FF", "#8A2BE2", "#A52A2A", "#FFA500", "#9ACD32"]
                 for i in range(1, 8):
                     fig1.add_trace(go.Scatter(
-                        x=df["DateTime"], 
-                        y=df[f"Top Zone #{i}"], 
-                        name=f"Top Zone #{i}", 
-                        mode="lines", 
+                        x=df["DateTime"], y=df[f"Top Zone #{i}"], name=f"Top Zone #{i}", mode="lines", 
                         line=dict(color=top_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig1, "Temperature (°C)")
@@ -417,13 +372,10 @@ if uploaded_files:
             if show_g2:
                 st.subheader("2) Bottom Zone Temperature (#1 to #7)")
                 fig2 = go.Figure()
-                bottom_colors = ["#E0FFFF", "#FF1493", "#808080", "#00FF00", "#008000", "#0000FF", "#8A2BE2"]
+                bottom_colors = ["#E0FFFF" if st.session_state.theme=="Dark Mode" else "#00BFFF", "#FF1493", "#808080", "#00FF00", "#008000", "#0000FF", "#8A2BE2"]
                 for i in range(1, 8):
                     fig2.add_trace(go.Scatter(
-                        x=df["DateTime"], 
-                        y=df[f"Bottom Zone #{i}"], 
-                        name=f"Bottom Zone #{i}", 
-                        mode="lines", 
+                        x=df["DateTime"], y=df[f"Bottom Zone #{i}"], name=f"Bottom Zone #{i}", mode="lines", 
                         line=dict(color=bottom_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig2, "Temperature (°C)")
@@ -433,14 +385,11 @@ if uploaded_files:
             if show_g3:
                 st.subheader("3) DRYOFF Temperature (DRYOFF1 to DRYOFF3)")
                 fig3 = go.Figure()
-                dry_colors = ["#FFA500", "#9ACD32", "#00ECFF"]
+                dry_colors = ["#FFA500", "#9ACD32", "#00ECFF" if st.session_state.theme=="Dark Mode" else "#008B8B"]
                 dryoff_names = ["DRYOFF1", "DRYOFF2", "DRYOFF3"]
                 for i in range(1, 4):
                     fig3.add_trace(go.Scatter(
-                        x=df["DateTime"], 
-                        y=df[dryoff_names[i-1]], 
-                        name=dryoff_names[i-1], 
-                        mode="lines", 
+                        x=df["DateTime"], y=df[dryoff_names[i-1]], name=dryoff_names[i-1], mode="lines", 
                         line=dict(color=dry_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig3, "Temperature (°C)")
@@ -451,70 +400,52 @@ if uploaded_files:
                 st.subheader("4) Oxygen EXIT/ENTRANCE & N2 Flow")
                 fig4 = make_subplots(specs=[[{"secondary_y": True}]])
                 
-                # Left Y-axis: ppm Oxygen (Scale 0-200 ppm)
                 fig4.add_trace(go.Scatter(
-                    x=df["DateTime"], 
-                    y=df["Oxygen EXIT"], 
-                    name="Oxygen EXIT", 
-                    mode="lines", 
-                    line=dict(color="#FF80FF", width=2)
+                    x=df["DateTime"], y=df["Oxygen EXIT"], name="Oxygen EXIT", mode="lines", 
+                    line=dict(color="#FF80FF" if st.session_state.theme=="Dark Mode" else "#800080", width=2)
                 ), secondary_y=False)
                 
                 fig4.add_trace(go.Scatter(
-                    x=df["DateTime"], 
-                    y=df["Oxygen ENTRANCE"], 
-                    name="Oxygen ENTRANCE", 
-                    mode="lines", 
+                    x=df["DateTime"], y=df["Oxygen ENTRANCE"], name="Oxygen ENTRANCE", mode="lines", 
                     line=dict(color="#A52A2A", width=2)
                 ), secondary_y=False)
 
-                # Right Y-axis: N2 Flow Rate (Scale 0-1000)
                 fig4.add_trace(go.Scatter(
-                    x=df["DateTime"], 
-                    y=df["N2 Exit"], 
-                    name="N2 Exit", 
-                    mode="lines", 
-                    line=dict(color="#ADD8E6", width=2, dash="dash")
+                    x=df["DateTime"], y=df["N2 Exit"], name="N2 Exit", mode="lines", 
+                    line=dict(color="#ADD8E6" if st.session_state.theme=="Dark Mode" else "#4682B4", width=2, dash="dash")
                 ), secondary_y=True)
 
                 fig4.add_trace(go.Scatter(
-                    x=df["DateTime"], 
-                    y=df["N2 Entrance"], 
-                    name="N2 Entrance", 
-                    mode="lines", 
-                    line=dict(color="#00FF00", width=2, dash="dash")
+                    x=df["DateTime"], y=df["N2 Entrance"], name="N2 Entrance", mode="lines", 
+                    line=dict(color="#00FF00" if st.session_state.theme=="Dark Mode" else "#006400", width=2, dash="dash")
                 ), secondary_y=True)
 
                 apply_industrial_style(fig4, "Oxygen Level (ppm)", is_dual_axis=True)
+                
+                font_c = "#FFFFFF" if st.session_state.theme == "Dark Mode" else "#000000"
+                grid_c = "rgba(255,255,255,0.08)" if st.session_state.theme == "Dark Mode" else "rgba(0,0,0,0.1)"
+                axis_lbl = "#ADD8E6" if st.session_state.theme == "Dark Mode" else "#4682B4"
+                
                 fig4.update_layout(
                     yaxis=dict(
-                        title=dict(text="Oxygen Level (ppm) [0-200]", font=dict(color="#FFFFFF", size=12)),
-                        range=[0, 200],
-                        showgrid=True,
-                        gridcolor="rgba(255,255,255,0.08)"
+                        title=dict(text="Oxygen Level (ppm) [0-200]", font=dict(color=font_c, size=12)),
+                        range=[0, 200], showgrid=True, gridcolor=grid_c
                     ),
                     yaxis2=dict(
-                        title=dict(text="N2 Flow Rate [0-1000]", font=dict(color="#ADD8E6", size=12)),
-                        tickfont=dict(color="#ADD8E6", size=10),
-                        showgrid=False,
-                        overlaying="y",
-                        side="right",
-                        linecolor="#ADD8E6",
-                        range=[0, 1000]
+                        title=dict(text="N2 Flow Rate [0-1000]", font=dict(color=axis_lbl, size=12)),
+                        tickfont=dict(color=axis_lbl, size=10),
+                        showgrid=False, overlaying="y", side="right", linecolor=axis_lbl, range=[0, 1000]
                     )
                 )
                 st.plotly_chart(fig4, use_container_width=True)
 
-            # 5. Cool Water Temp (Scale: -150 to 500 °C)
+            # 5. Cool Water Temp
             if show_g5:
                 st.subheader("5) COOL WATER TEMP")
                 fig5 = go.Figure()
                 fig5.add_trace(go.Scatter(
-                    x=df["DateTime"], 
-                    y=df["COOL WATER TEMP"], 
-                    name="COOL WATER TEMP", 
-                    mode="lines", 
-                    line=dict(color="#00ecff", width=2)
+                    x=df["DateTime"], y=df["COOL WATER TEMP"], name="COOL WATER TEMP", mode="lines", 
+                    line=dict(color="#00ecff" if st.session_state.theme=="Dark Mode" else "#008B8B", width=2)
                 ))
                 apply_industrial_style(fig5, "Cool Water Temp (°C)", y_range=[-150, 500])
                 st.plotly_chart(fig5, use_container_width=True)
@@ -522,16 +453,12 @@ if uploaded_files:
             # Download Excel Section
             with st.expander("📊 ตรวจสอบและเลือกดาวน์โหลดตารางข้อมูล Excel (.xlsx)"):
                 st.dataframe(df)
-                
                 st.markdown("---")
                 st.markdown("##### 📥 ตัวเลือกการดาวน์โหลดไฟล์ Excel")
                 
                 col_opt1, col_opt2 = st.columns([2, 1])
                 with col_opt1:
-                    custom_filename = st.text_input(
-                        "ตั้งชื่อไฟล์ดาวน์โหลด:", 
-                        value="combined_recorder_nb3_data.xlsx"
-                    )
+                    custom_filename = st.text_input("ตั้งชื่อไฟล์ดาวน์โหลด:", value="combined_recorder_nb3_data.xlsx")
                     if not custom_filename.endswith('.xlsx'):
                         custom_filename += '.xlsx'
                         

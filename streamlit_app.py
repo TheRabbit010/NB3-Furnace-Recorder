@@ -13,37 +13,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Dark Mode CSS (แก้ปัญหาปุ่ม Sidebar หายเด็ดขาด)
+# 2. Dark Mode CSS (ปรับปรุงการจัดการ Header ใหม่ทั้งหมด)
 st.markdown("""
     <style>
-        /* ทำให้แถบ Header ด้านบนโปร่งใส */
-        [data-testid="stHeader"] {
+        /* 1. ทำให้ Header โปร่งใส และดันเลเยอร์มาอยู่หน้าสุด (z-index) เพื่อป้องกันพื้นหลังทับปุ่มลูกศร */
+        header[data-testid="stHeader"] {
             background-color: transparent !important;
+            z-index: 99999 !important;
         }
         
-        /* ซ่อนเฉพาะแถบเมนูด้านขวา (Deploy, Settings) */
+        /* 2. ซ่อนแถบเมนูขวาบน (Deploy, Settings) โดยไม่กระทบปุ่มลูกศรด้านซ้าย */
         [data-testid="stToolbar"] {
             display: none !important;
         }
         
-        /* บังคับให้ปุ่มลูกศร (เปิด-ปิด Sidebar) แสดงผลและอยู่หน้าสุดเสมอ */
-        [data-testid="collapsedControl"] {
-            display: flex !important;
-            z-index: 999999 !important;
-        }
+        /* 3. ซ่อนเมนูแฮมเบอร์เกอร์และลายน้ำด้านล่าง */
+        #MainMenu { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
         
-        /* ซ่อนเมนูหลักและฟุตเตอร์ */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        
-        /* ตั้งค่าสีพื้นหลังหลัก */
+        /* 4. สีพื้นหลังหลักของแอป */
         html, body, .stApp, [data-testid="stAppViewContainer"] {
             background-color: #0e1117 !important;
             color: #ffffff !important;
         }
+        
+        /* 5. ปรับแต่ง Sidebar */
         [data-testid="stSidebar"] {
             background-color: #161b22 !important;
         }
+        
+        /* 6. ตัวหนังสือและองค์ประกอบอื่นๆ */
         .stMarkdown, h1, h2, h3, p, span, label {
             color: #ffffff !important;
         }

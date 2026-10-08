@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS คลีนๆ ไม่บังคับสี เพื่อให้สลับโหมด Light / Dark / System จากเมนุมุมขวาบนได้อย่างสมบูรณ์
+# 2. CSS คลีนๆ ไม่บังคับสี เพื่อให้สลับโหมด Light / Dark / System ได้สมบูรณ์
 st.markdown("""
     <style>
         /* ซ่อนเฉพาะปุ่ม Deploy และ Footer */
@@ -29,17 +29,24 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar Header & File Upload Menu
+# 3. จัดการ State สำหรับ Reset File Uploader
+if "file_uploader_key" not in st.session_state:
+    st.session_state.file_uploader_key = 0
+
+# Sidebar Header & File Upload Menu
 st.sidebar.header("📁 เมนูอัปโหลดข้อมูล")
 
+# ปุ่มเคลียร์ข้อมูลไฟล์เก่าทั้งหมด (รีเซ็ตทั้ง Cache และ File Uploader)
 if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด", type="primary"):
     st.cache_data.clear()
+    st.session_state.file_uploader_key += 1  # เปลี่ยน key เพื่อบังคับล้างไฟล์ที่เลือกค้างไว้
     st.rerun()
 
 uploaded_files = st.sidebar.file_uploader(
     "อัปโหลดไฟล์ Recorder NB3 (.csv) ได้มากกว่า 1 ไฟล์", 
     type=["csv"],
-    accept_multiple_files=True
+    accept_multiple_files=True,
+    key=f"uploader_{st.session_state.file_uploader_key}"  # ผูก Dynamic Key
 )
 
 st.title("🏭 Recorder NB3 Furnace")

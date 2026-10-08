@@ -36,7 +36,7 @@ if "file_uploader_key" not in st.session_state:
 # Sidebar Header & File Upload Menu
 st.sidebar.header("📁 เมนูอัปโหลดข้อมูล")
 
-# ปุ่มเคลียร์ข้อมูลไฟล์เก่าทั้งหมด (รีเซ็ตทั้ง Cache และ File Uploader)
+# ปุ่มเคลียร์ข้อมูลไฟล์เก่าทั้งหมด
 if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด", type="primary"):
     st.cache_data.clear()
     st.session_state.file_uploader_key += 1  # เปลี่ยน key เพื่อบังคับล้างไฟล์ที่เลือกค้างไว้
@@ -46,7 +46,7 @@ uploaded_files = st.sidebar.file_uploader(
     "อัปโหลดไฟล์ Recorder NB3 (.csv) ได้มากกว่า 1 ไฟล์", 
     type=["csv"],
     accept_multiple_files=True,
-    key=f"uploader_{st.session_state.file_uploader_key}"  # ผูก Dynamic Key
+    key=f"uploader_{st.session_state.file_uploader_key}"
 )
 
 st.title("🏭 Recorder NB3 Furnace")
@@ -71,18 +71,27 @@ def parse_single_file(uploaded_file):
     lines = text_content.splitlines()
     
     # 🔍 ตรวจสอบเบื้องต้นว่าเป็นไฟล์ RECORDER NB3 หรือไม่
-    is_nb3_file = False
-    for line in lines[:50]:  # ตรวจสอบ 50 บรรทัดแรก
-        if "#EndHeader" in line or "TH_CH" in line or "Recorder" in line:
-            is_nb3_file = True
+    endheader_cols = []
+    for line in lines[:100]:
+        line_str = line.strip()
+        if line_str.startswith("#EndHeader"):
+            endheader_cols = [x.strip() for x in line_str.split(",")]
             break
 
-    if not is_nb3_file:
-        return None  # คืนค่า None เพื่อแจ้งเตือนว่าไม่ใช่ไฟล์ NB3
+    # นับจำนวน Channel (TH_CH) จาก Header
+    ch_count = 0
+    if endheader_cols:
+        ch_count = sum(1 for col in endheader_cols if "TH_CH" in col.upper() or "CH" in col.upper())
+    else:
+        # Fallback: ค้นหารูปแบบช่องสัญญาณ TH_CH ในไฟล์
+        ch_matches = re.findall(r'\d+\)?TH_CH\d+|TH_CH\d+', text_content[:5000], re.IGNORECASE)
+        ch_count = len(ch_matches)
 
-    endheader_cols = []
+    # ⚠️ เงื่อนไขตรวจสอบ: NB3 ต้องมีอย่างน้อย 10 Channels ขึ้นไป (NB1 มักมีไม่เกิน 6 Channels)
+    if ch_count < 10:
+        return None  # คืนค่า None หากไม่ใช่ไฟล์ RECORDER NB3
+
     data_rows = []
-    
     date_regex = re.compile(r'^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}')
     time_regex = re.compile(r'^\d{1,2}:\d{2}:\d{2}')
     curr_date = ""
@@ -93,7 +102,6 @@ def parse_single_file(uploaded_file):
             continue
 
         if line_str.startswith("#EndHeader"):
-            endheader_cols = [x.strip() for x in line_str.split(",")]
             continue
 
         if date_regex.match(line_str) and "," not in line_str:
@@ -179,10 +187,14 @@ def process_multiple_files(uploaded_files):
         elif not single_df.empty:
             combined_dfs.append(single_df)
 
-    # หากพบไฟล์ที่ไม่ถูกต้อง ให้แจ้งเตือนและหยุดการทำงาน
+    # 🚨 หากพบไฟล์ที่ไม่ใช่ NB3 ให้แจ้งเตือนและหยุดการทำงานทันที
     if invalid_files:
         invalid_file_names = ", ".join(f"'{name}'" for name in invalid_files)
-        st.error(f"⚠️ พบไฟล์ที่ไม่ถูกต้อง: {invalid_file_names}\n\nไฟล์ดังกล่าวไม่ใช่ข้อมูลของ **RECORDER NB3** กรุณาตรวจสอบและอัปโหลดไฟล์ใหม่อีกครั้ง")
+        st.error(
+            f"⚠️ **ไม่สามารถประมวลผลได้:** พบไฟล์ที่ไม่ใช่รูปแบบของ RECORDER NB3 ได้แก่ {invalid_file_names}\n\n"
+            f"📌 *เนื่องจากไฟล์ดังกล่าวมีจำนวน Channels ไม่ถึงเกณฑ์ของ NB3 (เช่น ไฟล์ NB1 มีไม่ถึง 6 Channels)*\n\n"
+            f"กรุณากดปุ่ม **'🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด'** ด้านซ้าย แล้วเลือกอัปโหลดเฉพาะไฟล์ RECORDER NB3 อีกครั้ง"
+        )
         st.stop()  # หยุดการทำงานทันที
 
     if not combined_dfs:

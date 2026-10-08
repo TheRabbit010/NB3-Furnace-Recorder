@@ -13,27 +13,22 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Dark Mode CSS (แก้ไขส่วน Header เพื่อให้ปุ่ม Sidebar กลับมา)
+# 2. Dark Mode CSS (ปรับปรุงการแสดงผลปุ่ม Sidebar)
 st.markdown("""
     <style>
-        /* ตั้งค่า Header ให้โปร่งใส และไม่ซ่อนทั้งหมด */
+        /* ตั้งค่า Header ให้โปร่งใส โดยไม่ซ่อนการแสดงผลทั้งหมด เพื่อให้ปุ่มลูกศรทำงานได้ */
         header[data-testid="stHeader"] {
             background-color: transparent !important;
         }
         
-        /* แสดงปุ่ม Toggle Sidebar (ด้านซ้าย) */
-        .stApp > header > div:first-child {
-            display: block !important; 
-        }
-        
-        /* ซ่อนเฉพาะเมนูและปุ่ม Deploy ของ Streamlit (ด้านขวา) */
-        .stApp > header > div:last-child {
-            display: none !important; 
-        }
-        
+        /* ซ่อนเฉพาะแถบเมนูด้านขวา (Deploy, Settings, etc.) */
         [data-testid="stToolbar"] {
             display: none !important;
         }
+        
+        /* ซ่อนลายน้ำและเมนูเพิ่มเติมที่อาจจะติดมา */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
         
         html, body, .stApp, [data-testid="stAppViewContainer"] {
             background-color: #0e1117 !important;

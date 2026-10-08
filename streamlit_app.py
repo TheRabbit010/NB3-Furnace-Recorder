@@ -13,38 +13,38 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. CSS: จัดการเฉพาะเมนูส่วนเกิน และ เสริมความโดดเด่นให้ปุ่ม Sidebar 
+# 2. CSS: เน้นไฮไลท์ปุ่ม Sidebar ให้เด่นชัดทะลุพื้นหลังขาว/ดำ และซ่อนแค่ปุ่ม Deploy
 st.markdown("""
     <style>
-        /* ซ่อนเฉพาะเมนูขวาบนและ Footer */
-        [data-testid="stToolbar"] { visibility: hidden !important; display: none !important; }
-        footer { visibility: hidden !important; display: none !important; }
+        /* ซ่อนแค่ปุ่ม Deploy สีขาวๆ มุมขวาบน (แต่ยังเก็บปุ่ม Settings ไว้) */
+        .stDeployButton { display: none !important; }
         
-        /* 🌟 บังคับปุ่มลูกศรเปิด Sidebar (ซ้ายบน) ให้เป็นสีทองเด่นชัด 100% 🌟 */
-        [data-testid="collapsedControl"], 
-        header[data-testid="stHeader"] button {
+        /* ซ่อน Footer ด้านล่างสุด */
+        footer { visibility: hidden !important; }
+        
+        /* 🌟 บังคับปุ่มลูกศรเปิด Sidebar (ซ้ายบน) ให้เป็นกล่องสีทองเด่นชัด 100% 🌟 */
+        [data-testid="collapsedControl"] {
             background-color: #F0B90B !important; 
             border-radius: 6px !important;
-            border: 1px solid #d1a00a !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            display: inline-flex !important;
-            z-index: 999999 !important;
-            margin: 10px !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+            padding: 5px !important;
+            margin-top: 5px !important;
+            margin-left: 5px !important;
+            box-shadow: 0px 4px 6px rgba(0,0,0,0.3) !important;
+            transition: 0.3s;
         }
         
-        /* เปลี่ยนสีไอคอนข้างในปุ่มให้เป็นสีดำ */
-        [data-testid="collapsedControl"] svg, 
-        header[data-testid="stHeader"] button svg {
+        /* เปลี่ยนสีไอคอนข้างในปุ่มให้เป็นสีดำสนิทเพื่อตัดกับพื้นทอง */
+        [data-testid="collapsedControl"] svg {
             fill: #000000 !important;
             color: #000000 !important;
+            width: 24px !important;
+            height: 24px !important;
         }
         
-        /* เมื่อเอาเมาส์ชี้ให้ปุ่มสว่างขึ้น */
-        [data-testid="collapsedControl"]:hover, 
-        header[data-testid="stHeader"] button:hover {
-            background-color: #ffc926 !important;
+        /* เอฟเฟกต์ตอนเอาเมาส์ชี้ปุ่ม */
+        [data-testid="collapsedControl"]:hover {
+            background-color: #ffcc33 !important;
+            transform: scale(1.05);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -194,7 +194,7 @@ def to_excel_bytes(dataframe):
     output.seek(0)
     return output.getvalue()
 
-# 4. Chart Layout Styling (ให้ Plotly จัดการสีเองตาม Theme ปัจจุบัน)
+# 4. Chart Layout Styling (ตัดการเซ็ตสีตายตัวออก ปล่อยให้ Streamlit ทำงานออโต้)
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
     layout_args = dict(
         hovermode="x unified",
@@ -209,7 +209,6 @@ def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
         xaxis=dict(
             title=dict(text="Date & Time"),
             showgrid=True,
-            type="date",
         ),
         yaxis=dict(
             title=dict(text=y_title),
@@ -256,6 +255,8 @@ if uploaded_files:
             show_g4 = st.sidebar.checkbox("4. ppm Oxygen & N2 Flow", value=True)
             show_g5 = st.sidebar.checkbox("5. Cool Water Temp", value=True)
 
+            # --- เพิ่ม theme="streamlit" เข้าไปใน st.plotly_chart เพื่อให้กราฟเปลี่ยนสีพื้นตามโหมดออโต้ ---
+            
             # 1. Top Zone Temp (#1 - #7)
             if show_g1:
                 st.subheader("1) Top Zone Temperature (#1 to #7)")
@@ -267,7 +268,7 @@ if uploaded_files:
                         line=dict(color=top_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig1, "Temperature (°C)")
-                st.plotly_chart(fig1, use_container_width=True)
+                st.plotly_chart(fig1, use_container_width=True, theme="streamlit")
 
             # 2. Bottom Zone Temp (#1 - #7)
             if show_g2:
@@ -280,7 +281,7 @@ if uploaded_files:
                         line=dict(color=bottom_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig2, "Temperature (°C)")
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, use_container_width=True, theme="streamlit")
 
             # 3. DRYOFF1-3
             if show_g3:
@@ -294,7 +295,7 @@ if uploaded_files:
                         line=dict(color=dry_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig3, "Temperature (°C)")
-                st.plotly_chart(fig3, use_container_width=True)
+                st.plotly_chart(fig3, use_container_width=True, theme="streamlit")
 
             # 4. ppm Oxygen & N2 Flow Rate (Dual Axis)
             if show_g4:
@@ -333,7 +334,7 @@ if uploaded_files:
                         showgrid=False, overlaying="y", side="right", range=[0, 1000]
                     )
                 )
-                st.plotly_chart(fig4, use_container_width=True)
+                st.plotly_chart(fig4, use_container_width=True, theme="streamlit")
 
             # 5. Cool Water Temp
             if show_g5:
@@ -344,7 +345,7 @@ if uploaded_files:
                     line=dict(color="#008B8B", width=2)
                 ))
                 apply_industrial_style(fig5, "Cool Water Temp (°C)", y_range=[-150, 500])
-                st.plotly_chart(fig5, use_container_width=True)
+                st.plotly_chart(fig5, use_container_width=True, theme="streamlit")
 
             # Download Excel Section
             with st.expander("📊 ตรวจสอบและเลือกดาวน์โหลดตารางข้อมูล Excel (.xlsx)"):

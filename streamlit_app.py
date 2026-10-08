@@ -5,7 +5,7 @@ import streamlit as st
 import re
 import io
 
-# 1. Page Config (ตั้งค่าหน้าเพจ รวมถึง Sidebar ให้อยู่ด้านซ้ายและกางออกเสมอ)
+# 1. Page Config (บังคับให้ Sidebar กางออกเสมอเมื่อเปิดครั้งแรก)
 st.set_page_config(
     page_title="Recorder NB3 Furnace",
     page_icon="🏭",
@@ -17,7 +17,7 @@ st.set_page_config(
 if "theme" not in st.session_state:
     st.session_state.theme = "Dark Mode"
 
-# Sidebar: ส่วนการตั้งค่าระบบและอัปโหลดไฟล์ (อยู่ด้านซ้ายมือ)
+# Sidebar: ส่วนการตั้งค่าระบบและอัปโหลดไฟล์
 st.sidebar.header("⚙️ การตั้งค่าระบบ")
 theme_mode = st.sidebar.radio(
     "เลือกโหมดหน้าจอ:", 
@@ -39,7 +39,7 @@ uploaded_files = st.sidebar.file_uploader(
     accept_multiple_files=True
 )
 
-# 3. Dynamic CSS สำหรับ Dark Mode และ Bright Mode
+# 3. กำหนดค่าสีตาม Theme ที่เลือก
 if st.session_state.theme == "Dark Mode":
     c_bg = "#0e1117"
     c_sidebar = "#161b22"
@@ -48,92 +48,154 @@ if st.session_state.theme == "Dark Mode":
     c_border = "#30363d"
     c_card = "#161b22"
     c_accent = "#F0B90B"
-    c_svg = "#ffffff"
 else:
-    c_bg = "#ffffff"
-    c_sidebar = "#f0f2f6"
+    c_bg = "#f4f6f9"
+    c_sidebar = "#ffffff"
     c_text = "#000000"
     c_btn_bg = "#ffffff"
     c_border = "#cccccc"
     c_card = "#ffffff"
     c_accent = "#F0B90B"
-    c_svg = "#000000"
 
+# Dynamic CSS Injection (แก้ปัญหาปุ่ม Sidebar หาย และจัดสไตล์ใหม่ให้ปลอดภัยขึ้น)
 st.markdown(f"""
     <style>
-        /* Header โปร่งใส */
-        header[data-testid="stHeader"] {{ background-color: transparent !important; }}
-        
-        /* ปุ่มเปิด-ปิด Sidebar */
-        [data-testid="collapsedControl"], [data-testid="stSidebarCollapseButton"], header[data-testid="stHeader"] button {{
-            background: transparent !important; border: none !important; box-shadow: none !important; z-index: 99999 !important;
-        }}
-        [data-testid="collapsedControl"] svg, [data-testid="stSidebarCollapseButton"] svg, header[data-testid="stHeader"] button svg {{
-            fill: {c_svg} !important; color: {c_svg} !important;
-        }}
-        [data-testid="collapsedControl"]:hover svg, [data-testid="stSidebarCollapseButton"]:hover svg, header[data-testid="stHeader"] button:hover svg {{
-            fill: {c_accent} !important; color: {c_accent} !important;
+        /* ทำให้ Header โปร่งใส (แต่ไม่ซ่อนปุ่ม) */
+        header[data-testid="stHeader"] {{
+            background-color: transparent !important;
         }}
         
-        /* ซ่อนเมนู Deploy/Settings มุมขวาบน */
-        [data-testid="stToolbar"] {{ display: none !important; }}
-        #MainMenu, footer {{ visibility: hidden !important; }}
+        /* ==========================================
+           🌟 แก้ปัญหา Sidebar หาย / ปุ่ม Toggle ล่องหน 
+           ========================================== */
+        /* บังคับให้ปุ่มเปิด Sidebar (มุมซ้ายบน) แสดงผลเป็นกล่องชัดเจนเสมอ */
+        [data-testid="collapsedControl"] {{
+            display: flex !important;
+            visibility: visible !important;
+            z-index: 1000000 !important;
+            background-color: {c_btn_bg} !important;
+            border: 1px solid {c_accent} !important;
+            border-radius: 8px !important;
+            margin: 15px !important;
+            padding: 2px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+        }}
         
-        /* สีพื้นหลังและตัวอักษรหลัก */
+        /* สีของไอคอนลูกศร เปิด/ปิด Sidebar */
+        [data-testid="collapsedControl"] svg,
+        [data-testid="stSidebarCollapseButton"] svg {{
+            fill: {c_accent} !important;
+            color: {c_accent} !important;
+        }}
+        
+        /* เมื่อเอาเมาส์ชี้ปุ่มเปิด/ปิด */
+        [data-testid="collapsedControl"]:hover,
+        [data-testid="stSidebarCollapseButton"]:hover {{
+            background-color: {c_accent} !important;
+        }}
+        [data-testid="collapsedControl"]:hover svg,
+        [data-testid="stSidebarCollapseButton"]:hover svg {{
+            fill: #000000 !important;
+            color: #000000 !important;
+        }}
+        /* ========================================== */
+        
+        /* ซ่อนเมนู Deploy/Settings มุมขวาบนอย่างปลอดภัย */
+        [data-testid="stToolbar"] {{ visibility: hidden !important; }}
+        #MainMenu, footer {{ display: none !important; }}
+        
+        /* สีพื้นหลังและตัวอักษรหลักของแอป */
         html, body, .stApp, [data-testid="stAppViewContainer"] {{
-            background-color: {c_bg} !important; color: {c_text} !important;
+            background-color: {c_bg} !important; 
+            color: {c_text} !important;
         }}
-        [data-testid="stSidebar"] {{ background-color: {c_sidebar} !important; }}
-        .stMarkdown, h1, h2, h3, p, span, label {{ color: {c_text} !important; }}
+        
+        /* สีพื้นหลัง Sidebar */
+        [data-testid="stSidebar"] {{ 
+            background-color: {c_sidebar} !important;
+            border-right: 1px solid {c_border} !important;
+        }}
+        .stMarkdown, h1, h2, h3, h4, p, span, label {{ 
+            color: {c_text} !important; 
+        }}
         
         /* ปุ่มใน Sidebar */
         [data-testid="stSidebar"] div.stButton > button {{
-            background-color: {c_btn_bg} !important; color: {c_text} !important; border: 1px solid {c_accent} !important;
-            font-weight: bold !important; width: 100% !important; padding: 8px 16px !important;
+            background-color: {c_btn_bg} !important; 
+            color: {c_text} !important; 
+            border: 1px solid {c_accent} !important;
+            font-weight: bold !important; 
+            width: 100% !important; 
+            padding: 8px 16px !important;
         }}
         [data-testid="stSidebar"] div.stButton > button:hover {{
-            background-color: {c_accent} !important; color: #000000 !important;
+            background-color: {c_accent} !important; 
+            color: #000000 !important;
         }}
         
         /* กล่องอัปโหลดไฟล์ */
         [data-testid="stFileUploader"] {{
-            background-color: {c_sidebar} !important; border: 1.5px solid {c_accent} !important; border-radius: 8px !important; padding: 10px !important;
+            background-color: {c_sidebar} !important; 
+            border: 1.5px solid {c_accent} !important; 
+            border-radius: 8px !important; 
+            padding: 10px !important;
         }}
         [data-testid="stFileUploader"] section {{
-            background-color: {c_btn_bg} !important; border: 1px dashed {c_accent} !important; border-radius: 6px !important;
-        }}
-        [data-testid="stFileUploader"] section div, [data-testid="stFileUploader"] section span, [data-testid="stFileUploader"] section small {{
-            color: {c_text} !important;
+            background-color: {c_btn_bg} !important; 
+            border: 1px dashed {c_accent} !important; 
+            border-radius: 6px !important;
         }}
         [data-testid="stFileUploaderFileData"], [data-testid="stFileUploaderFile"] {{
-            background-color: {c_btn_bg} !important; border: 1px solid {c_accent} !important; border-radius: 6px !important;
+            background-color: {c_btn_bg} !important; 
+            border: 1px solid {c_accent} !important; 
+            border-radius: 6px !important;
         }}
         [data-testid="stFileUploaderFileData"] *, [data-testid="stFileUploaderFile"] * {{
-            color: {c_text} !important; font-weight: bold !important;
+            color: {c_text} !important; 
+            font-weight: bold !important;
         }}
         
         /* Expander และ DataFrame */
         [data-testid="stExpander"], [data-testid="stDataFrame"] {{
-            background-color: {c_card} !important; border: 1px solid {c_border} !important; border-radius: 8px !important;
+            background-color: {c_card} !important; 
+            border: 1px solid {c_border} !important; 
+            border-radius: 8px !important;
         }}
         [data-testid="stExpander"] details summary, div[data-testid="stDataFrame"] div[role="columnheader"] {{
-            background-color: {c_btn_bg} !important; color: {c_text} !important;
+            background-color: {c_btn_bg} !important; 
+            color: {c_text} !important;
         }}
-        div[data-testid="stDataFrame"] div[role="grid"] {{ background-color: {c_card} !important; color: {c_text} !important; }}
+        div[data-testid="stDataFrame"] div[role="grid"] {{ 
+            background-color: {c_card} !important; 
+            color: {c_text} !important; 
+        }}
         
         /* Input และ Download Button */
         div[data-baseweb="input"], div[data-baseweb="input"] input {{
-            background-color: {c_btn_bg} !important; color: {c_text} !important; border: 1px solid {c_border} !important; border-radius: 6px !important;
+            background-color: {c_btn_bg} !important; 
+            color: {c_text} !important; 
+            border: 1px solid {c_border} !important; 
+            border-radius: 6px !important;
         }}
         div.stDownloadButton > button {{
-            background-color: {c_btn_bg} !important; border: 1.5px solid {c_accent} !important; border-radius: 6px !important;
-            padding: 8px 16px !important; transition: all 0.2s ease-in-out;
+            background-color: {c_btn_bg} !important; 
+            border: 1.5px solid {c_accent} !important; 
+            border-radius: 6px !important;
+            padding: 8px 16px !important; 
+            transition: all 0.2s ease-in-out;
         }}
-        div.stDownloadButton > button, div.stDownloadButton > button p {{
-            color: {c_text} !important; font-weight: bold !important; font-size: 15px !important;
+        div.stDownloadButton > button p {{
+            color: {c_text} !important; 
+            font-weight: bold !important; 
+            font-size: 15px !important;
         }}
-        div.stDownloadButton > button:hover {{ background-color: {c_accent} !important; border-color: {c_accent} !important; }}
-        div.stDownloadButton > button:hover, div.stDownloadButton > button:hover p {{ color: #000000 !important; }}
+        div.stDownloadButton > button:hover {{ 
+            background-color: {c_accent} !important; 
+            border-color: {c_accent} !important; 
+        }}
+        div.stDownloadButton > button:hover p {{ 
+            color: #000000 !important; 
+        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -273,7 +335,7 @@ def to_excel_bytes(dataframe):
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
     is_dark = st.session_state.theme == "Dark Mode"
     
-    p_bg = "#161b22" if is_dark else "#f8f9fa"
+    p_bg = "#161b22" if is_dark else "#f4f6f9"
     paper_bg = "#0e1117" if is_dark else "#ffffff"
     font_c = "#FFFFFF" if is_dark else "#000000"
     tick_c = "#CCCCCC" if is_dark else "#333333"

@@ -5,7 +5,7 @@ import streamlit as st
 import re
 import io
 
-# 1. Page Config (บังคับกาง Sidebar เสมอเมื่อโหลดหน้าแรก)
+# 1. Page Config
 st.set_page_config(
     page_title="Recorder NB3 Furnace",
     page_icon="🏭",
@@ -13,23 +13,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. ตั้งค่า State สำหรับ Theme (Dark / Bright Mode)
-if "theme" not in st.session_state:
-    st.session_state.theme = "Dark Mode"
+# 2. CSS: ลบการบังคับสีออกทั้งหมด เพื่อให้ Streamlit จัดการ Theming อัตโนมัติ (รองรับ System/Light/Dark 100%)
+st.markdown("""
+    <style>
+        /* ซ่อนเฉพาะเมนู Deploy มุมขวาบน และ Footer ที่กวนใจ */
+        [data-testid="stToolbar"] { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
+    </style>
+""", unsafe_allow_html=True)
 
-# Sidebar: ส่วนการตั้งค่าระบบและอัปโหลดไฟล์
-st.sidebar.header("⚙️ การตั้งค่าระบบ")
-theme_mode = st.sidebar.radio(
-    "เลือกโหมดหน้าจอ:", 
-    ["Dark Mode", "Bright Mode"], 
-    index=0 if st.session_state.theme == "Dark Mode" else 1
-)
-st.session_state.theme = theme_mode
-
-st.sidebar.markdown("---")
+# Sidebar: เมนูอัปโหลดข้อมูล (ไม่มีการเลือกโหมดซ้ำซ้อนแล้ว)
 st.sidebar.header("📁 เมนูอัปโหลดข้อมูล")
 
-if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด"):
+if st.sidebar.button("🧹 เคลียร์ข้อมูลไฟล์เก่าทั้งหมด", type="primary"):
     st.cache_data.clear()
     st.rerun()
 
@@ -39,87 +35,9 @@ uploaded_files = st.sidebar.file_uploader(
     accept_multiple_files=True
 )
 
-# 3. กำหนดค่าสีตาม Theme ที่เลือก
-if st.session_state.theme == "Dark Mode":
-    c_bg = "#0e1117"
-    c_sidebar = "#161b22"
-    c_text = "#ffffff"
-    c_btn_bg = "#21262d"
-    c_border = "#30363d"
-    c_card = "#161b22"
-    c_accent = "#F0B90B"
-else:
-    c_bg = "#f0f2f6"
-    c_sidebar = "#ffffff"
-    c_text = "#000000"
-    c_btn_bg = "#ffffff"
-    c_border = "#cccccc"
-    c_card = "#ffffff"
-    c_accent = "#F0B90B"
-
-# 🌟 CSS แบบคลีนที่สุด: เปลี่ยนแค่สีพื้นหลังและข้อความ ห้ามแตะต้องโครงสร้างปุ่มของ Streamlit 🌟
-st.markdown(f"""
-    <style>
-        /* 1. จัดการสีพื้นหลังและสีตัวอักษรหลักของแอป */
-        .stApp, [data-testid="stAppViewContainer"] {{
-            background-color: {c_bg} !important;
-        }}
-        [data-testid="stHeader"] {{
-            background-color: {c_bg} !important; 
-        }}
-        
-        /* 2. จัดการสีพื้นหลังของ Sidebar */
-        [data-testid="stSidebar"] {{
-            background-color: {c_sidebar} !important;
-            border-right: 1px solid {c_border} !important;
-        }}
-        
-        /* 3. บังคับสีตัวอักษรทั้งหมดให้สอดคล้องกับโหมด (ไม่กระทบไอคอน) */
-        h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {{
-            color: {c_text} !important;
-        }}
-        
-        /* 4. ปรับแต่งปุ่มทั่วไปให้สวยงามเข้ากับตีม */
-        div.stButton > button {{
-            background-color: {c_btn_bg} !important; 
-            color: {c_text} !important; 
-            border: 1px solid {c_accent} !important;
-            font-weight: bold !important; 
-        }}
-        div.stButton > button:hover {{
-            background-color: {c_accent} !important; 
-            color: #000000 !important;
-            border: 1px solid {c_accent} !important;
-        }}
-        
-        /* 5. ปรับสีกล่องตารางและ Expander */
-        [data-testid="stExpander"], [data-testid="stDataFrame"] {{
-            background-color: {c_card} !important; 
-            border: 1px solid {c_border} !important; 
-        }}
-        [data-testid="stExpander"] details summary {{
-            background-color: {c_btn_bg} !important; 
-            color: {c_text} !important;
-        }}
-        div[data-testid="stDataFrame"] div[role="grid"], div[data-testid="stDataFrame"] div[role="columnheader"] {{ 
-            background-color: {c_card} !important; 
-        }}
-        
-        /* 6. ปรับสีกล่อง Input */
-        div[data-baseweb="input"], div[data-baseweb="input"] input {{
-            background-color: {c_btn_bg} !important; 
-            color: {c_text} !important; 
-            border: 1px solid {c_border} !important; 
-        }}
-        
-        /* ซ่อนเฉพาะ Footer ที่กวนใจ (ไม่ซ่อน Header) */
-        footer {{ visibility: hidden !important; }}
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("🏭 Recorder NB3 Furnace")
 
-# 4. Flexible File Parsing Function
+# 3. Flexible File Parsing Function
 def parse_single_file(uploaded_file):
     uploaded_file.seek(0)
     raw_bytes = uploaded_file.read()
@@ -249,30 +167,12 @@ def to_excel_bytes(dataframe):
     output.seek(0)
     return output.getvalue()
 
-# 5. Chart Layout Styling
+# 4. Chart Layout Styling (แก้ไขให้กราฟเปลี่ยนสีตามระบบแบบอัตโนมัติ)
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
-    is_dark = st.session_state.theme == "Dark Mode"
-    
-    p_bg = "#161b22" if is_dark else "#ffffff"
-    paper_bg = "#0e1117" if is_dark else "#f0f2f6"
-    font_c = "#FFFFFF" if is_dark else "#000000"
-    tick_c = "#CCCCCC" if is_dark else "#333333"
-    grid_c = "rgba(255,255,255,0.08)" if is_dark else "rgba(0,0,0,0.1)"
-    line_c = "#555555" if is_dark else "#cccccc"
-    leg_bg = "rgba(27, 31, 36, 0.95)" if is_dark else "rgba(255, 255, 255, 0.95)"
-    template = "plotly_dark" if is_dark else "plotly_white"
-
     layout_args = dict(
-        template=template,
-        plot_bgcolor=p_bg,
-        paper_bgcolor=paper_bg,
         hovermode="x unified",
         showlegend=True,
         legend=dict(
-            font=dict(color=font_c, size=12, family="Arial Bold"),
-            bgcolor=leg_bg,
-            bordercolor="#F0B90B",
-            borderwidth=1.5,
             orientation="v",
             yanchor="top",
             y=1,
@@ -280,20 +180,14 @@ def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
             x=1.02
         ),
         xaxis=dict(
-            title=dict(text="Date & Time", font=dict(color=font_c, size=12)),
-            tickfont=dict(color=tick_c, size=10),
+            title=dict(text="Date & Time"),
             showgrid=True,
-            gridcolor=grid_c,
-            linecolor=line_c,
             type="date",
         ),
         yaxis=dict(
-            title=dict(text=y_title, font=dict(color=font_c, size=12)),
-            tickfont=dict(color=tick_c, size=10),
+            title=dict(text=y_title),
             showgrid=True,
-            gridcolor=grid_c,
             zeroline=False,
-            linecolor=line_c,
         ),
         height=420,
         margin=dict(l=60, r=180, t=30, b=40),
@@ -303,7 +197,7 @@ def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
         
     fig.update_layout(**layout_args)
 
-# 6. Main Content Area
+# 5. Main Content Area
 if uploaded_files:
     try:
         raw_df = process_multiple_files(uploaded_files)
@@ -352,7 +246,7 @@ if uploaded_files:
             if show_g2:
                 st.subheader("2) Bottom Zone Temperature (#1 to #7)")
                 fig2 = go.Figure()
-                bottom_colors = ["#E0FFFF" if st.session_state.theme=="Dark Mode" else "#00BFFF", "#FF1493", "#808080", "#00FF00", "#008000", "#0000FF", "#8A2BE2"]
+                bottom_colors = ["#00BFFF", "#FF1493", "#808080", "#00FF00", "#008000", "#0000FF", "#8A2BE2"]
                 for i in range(1, 8):
                     fig2.add_trace(go.Scatter(
                         x=df["DateTime"], y=df[f"Bottom Zone #{i}"], name=f"Bottom Zone #{i}", mode="lines", 
@@ -365,7 +259,7 @@ if uploaded_files:
             if show_g3:
                 st.subheader("3) DRYOFF Temperature (DRYOFF1 to DRYOFF3)")
                 fig3 = go.Figure()
-                dry_colors = ["#FFA500", "#9ACD32", "#00ECFF" if st.session_state.theme=="Dark Mode" else "#008B8B"]
+                dry_colors = ["#FFA500", "#9ACD32", "#008B8B"]
                 dryoff_names = ["DRYOFF1", "DRYOFF2", "DRYOFF3"]
                 for i in range(1, 4):
                     fig3.add_trace(go.Scatter(
@@ -382,7 +276,7 @@ if uploaded_files:
                 
                 fig4.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["Oxygen EXIT"], name="Oxygen EXIT", mode="lines", 
-                    line=dict(color="#FF80FF" if st.session_state.theme=="Dark Mode" else "#800080", width=2)
+                    line=dict(color="#FF00FF", width=2)
                 ), secondary_y=False)
                 
                 fig4.add_trace(go.Scatter(
@@ -392,29 +286,24 @@ if uploaded_files:
 
                 fig4.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["N2 Exit"], name="N2 Exit", mode="lines", 
-                    line=dict(color="#ADD8E6" if st.session_state.theme=="Dark Mode" else "#4682B4", width=2, dash="dash")
+                    line=dict(color="#1f77b4", width=2, dash="dash")
                 ), secondary_y=True)
 
                 fig4.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["N2 Entrance"], name="N2 Entrance", mode="lines", 
-                    line=dict(color="#00FF00" if st.session_state.theme=="Dark Mode" else "#006400", width=2, dash="dash")
+                    line=dict(color="#2ca02c", width=2, dash="dash")
                 ), secondary_y=True)
 
                 apply_industrial_style(fig4, "Oxygen Level (ppm)", is_dual_axis=True)
                 
-                font_c = "#FFFFFF" if st.session_state.theme == "Dark Mode" else "#000000"
-                grid_c = "rgba(255,255,255,0.08)" if st.session_state.theme == "Dark Mode" else "rgba(0,0,0,0.1)"
-                axis_lbl = "#ADD8E6" if st.session_state.theme == "Dark Mode" else "#4682B4"
-                
                 fig4.update_layout(
                     yaxis=dict(
-                        title=dict(text="Oxygen Level (ppm) [0-200]", font=dict(color=font_c, size=12)),
-                        range=[0, 200], showgrid=True, gridcolor=grid_c
+                        title=dict(text="Oxygen Level (ppm) [0-200]"),
+                        range=[0, 200], showgrid=True
                     ),
                     yaxis2=dict(
-                        title=dict(text="N2 Flow Rate [0-1000]", font=dict(color=axis_lbl, size=12)),
-                        tickfont=dict(color=axis_lbl, size=10),
-                        showgrid=False, overlaying="y", side="right", linecolor=axis_lbl, range=[0, 1000]
+                        title=dict(text="N2 Flow Rate [0-1000]"),
+                        showgrid=False, overlaying="y", side="right", range=[0, 1000]
                     )
                 )
                 st.plotly_chart(fig4, use_container_width=True)
@@ -425,7 +314,7 @@ if uploaded_files:
                 fig5 = go.Figure()
                 fig5.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["COOL WATER TEMP"], name="COOL WATER TEMP", mode="lines", 
-                    line=dict(color="#00ecff" if st.session_state.theme=="Dark Mode" else "#008B8B", width=2)
+                    line=dict(color="#008B8B", width=2)
                 ))
                 apply_industrial_style(fig5, "Cool Water Temp (°C)", y_range=[-150, 500])
                 st.plotly_chart(fig5, use_container_width=True)
@@ -450,7 +339,8 @@ if uploaded_files:
                         data=excel_bytes,
                         file_name=custom_filename,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
+                        use_container_width=True,
+                        type="primary"
                     )
 
     except Exception as e:

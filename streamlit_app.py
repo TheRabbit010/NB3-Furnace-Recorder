@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Dark Mode CSS (แก้ปัญหาไอคอนลูกศรสีดำกลืนกับพื้นหลัง)
+# 2. Dark Mode CSS (คืนค่าปุ่มลูกศรแบบดั้งเดิม แต่ให้เป็นสีขาว)
 st.markdown("""
     <style>
         /* 1. ตั้งค่า Header ให้โปร่งใส ไม่บังเนื้อหา */
@@ -21,42 +21,31 @@ st.markdown("""
             background-color: transparent !important;
         }
         
-        /* --- 🌟 2. แก้ปัญหาปุ่มลูกศร Sidebar 🌟 --- */
-        /* ออกแบบปุ่มเปิด Sidebar ใหม่ให้เห็นชัดเจน ป้องกันการกลืนกับพื้นดำ */
+        /* --- 🌟 2. ปุ่มเปิด-ปิด Sidebar แบบดั้งเดิม (Native) 🌟 --- */
+        /* ลบกรอบและพื้นหลังออก ให้เหลือแค่ตัวไอคอนเพียวๆ แบบในรูปตัวอย่าง */
         [data-testid="collapsedControl"],
+        [data-testid="stSidebarCollapseButton"],
         header[data-testid="stHeader"] button {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background-color: #21262d !important; /* พื้นหลังปุ่มเทาเข้ม */
-            border: 1px solid #F0B90B !important; /* กรอบสีทอง */
-            border-radius: 6px !important;
-            width: 40px !important;
-            height: 40px !important;
-            margin-top: 15px !important;
-            margin-left: 15px !important;
-            z-index: 999999 !important;
-            transition: all 0.2s ease-in-out;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            z-index: 99999 !important;
         }
         
-        /* บังคับเปลี่ยนสีไอคอนลูกศรเป็นสีขาว */
+        /* เปลี่ยนสีไอคอนลูกศร (<< และ >) ให้เป็นสีขาวล้วน */
         [data-testid="collapsedControl"] svg,
+        [data-testid="stSidebarCollapseButton"] svg,
         header[data-testid="stHeader"] button svg {
             fill: #ffffff !important;
             color: #ffffff !important;
-            width: 20px !important;
-            height: 20px !important;
         }
         
-        /* เอฟเฟกต์เมื่อเอาเมาส์ชี้ปุ่มลูกศร */
-        [data-testid="collapsedControl"]:hover,
-        header[data-testid="stHeader"] button:hover {
-            background-color: #F0B90B !important; /* เปลี่ยนเป็นสีทอง */
-        }
+        /* เมื่อเอาเมาส์ชี้ที่ปุ่มลูกศร ให้เป็นสีทอง */
         [data-testid="collapsedControl"]:hover svg,
+        [data-testid="stSidebarCollapseButton"]:hover svg,
         header[data-testid="stHeader"] button:hover svg {
-            fill: #000000 !important; /* เปลี่ยนไอคอนเป็นสีดำให้ตัดกับพื้นทอง */
-            color: #000000 !important;
+            fill: #F0B90B !important;
+            color: #F0B90B !important;
         }
         /* ------------------------------------- */
 

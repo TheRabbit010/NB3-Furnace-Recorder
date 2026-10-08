@@ -57,31 +57,55 @@ else:
     c_card = "#ffffff"
     c_accent = "#F0B90B"
 
-# 🌟 CSS แบบเรียบง่ายที่สุด เพื่อไม่ให้กระทบปุ่มระบบของ Streamlit
+# 🌟 CSS แบบบังคับปุ่มเปิด Sidebar ให้โผล่ 100% 🌟
 st.markdown(f"""
     <style>
-        /* จัดการสี Header และปุ่ม Sidebar ให้เข้ากับพื้นหลัง */
-        header[data-testid="stHeader"] {{
-            background-color: {c_bg} !important;
+        /* ---------------------------------------------------
+           แก้ไขปัญหาปุ่มล่องหน: ทำปุ่มให้เป็นกล่องสีทองชัดเจน 
+           --------------------------------------------------- */
+        [data-testid="collapsedControl"] {{
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background-color: {c_accent} !important; /* พื้นหลังปุ่มสีทอง */
+            border-radius: 6px !important;
+            padding: 4px !important;
+            margin: 10px !important;
+            z-index: 999999 !important;
+            box-shadow: 0px 4px 6px rgba(0,0,0,0.3) !important;
         }}
         
-        /* บังคับสีปุ่มเปิด-ปิด (SVG) ให้เป็นสีเหลืองทอง (เพื่อให้มองเห็นชัดเสมอ) */
-        header[data-testid="stHeader"] svg {{
-            fill: {c_accent} !important;
-            color: {c_accent} !important;
+        /* บังคับสีไอคอนข้างในปุ่มให้เป็นสีดำ เพื่อให้ตัดกับสีทอง */
+        [data-testid="collapsedControl"] svg {{
+            fill: #000000 !important;
+            color: #000000 !important;
+            width: 24px !important;
+            height: 24px !important;
         }}
+        
+        /* เมื่อเอาเมาส์ชี้ปุ่ม */
+        [data-testid="collapsedControl"]:hover {{
+            background-color: #ffffff !important;
+        }}
+        /* --------------------------------------------------- */
 
         /* ซ่อนเมนู Deploy มุมขวาบน */
         [data-testid="stToolbar"] {{ visibility: hidden !important; }}
         #MainMenu, footer {{ display: none !important; }}
         
+        /* พื้นหลัง Header */
+        header[data-testid="stHeader"] {{
+            background-color: transparent !important;
+        }}
+
         /* จัดการสีพื้นหลังแอปหลัก */
-        .stApp {{
+        html, body, .stApp, [data-testid="stAppViewContainer"] {{
             background-color: {c_bg} !important; 
+            color: {c_text} !important; 
         }}
         
-        /* จัดการสีตัวอักษรทั้งหมด */
-        html, body, [data-testid="stAppViewContainer"], .stMarkdown, h1, h2, h3, h4, p, span, label {{
+        /* สีตัวอักษรทั้งหมด */
+        .stMarkdown, h1, h2, h3, h4, p, span, label {{
             color: {c_text} !important; 
         }}
         
@@ -127,7 +151,7 @@ st.markdown(f"""
             font-weight: bold !important;
         }}
         
-        /* กล่องขยายข้อมูล (Expander) และ ตาราง DataFrame */
+        /* Expander และ DataFrame */
         [data-testid="stExpander"], [data-testid="stDataFrame"] {{
             background-color: {c_card} !important; 
             border: 1px solid {c_border} !important; 
@@ -142,7 +166,7 @@ st.markdown(f"""
             color: {c_text} !important; 
         }}
         
-        /* กล่องข้อความ (Input) และปุ่มดาวน์โหลด */
+        /* Input และปุ่มดาวน์โหลด */
         div[data-baseweb="input"], div[data-baseweb="input"] input {{
             background-color: {c_btn_bg} !important; 
             color: {c_text} !important; 
@@ -154,7 +178,6 @@ st.markdown(f"""
             border: 1.5px solid {c_accent} !important; 
             border-radius: 6px !important;
             padding: 8px 16px !important; 
-            transition: all 0.2s ease-in-out;
         }}
         div.stDownloadButton > button p {{
             color: {c_text} !important; 

@@ -5,7 +5,7 @@ import streamlit as st
 import re
 import io
 
-# 1. Page Config (บังคับ Sidebar กางออกเสมอเป็นค่าเริ่มต้น)
+# 1. Page Config (เปิด Sidebar ค้างไว้เป็นค่าเริ่มต้น)
 st.set_page_config(
     page_title="Recorder NB3 Furnace",
     page_icon="🏭",
@@ -13,61 +13,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Dark Mode CSS แบบเสถียร (บังคับพื้นหลังมืด ตัวอักษรขาว ปรับแต่งปุ่มและกล่องให้เข้ากัน)
+# 2. CSS คลีนๆ ไม่บังคับสี เพื่อให้สลับโหมด Light / Dark / System จากเมนุมุมขวาบนได้อย่างสมบูรณ์
 st.markdown("""
     <style>
-        /* ซ่อนเฉพาะเมนู Deploy และ Footer */
+        /* ซ่อนเฉพาะปุ่ม Deploy และ Footer */
         .stDeployButton { display: none !important; }
         footer { visibility: hidden !important; display: none !important; }
         
-        /* บังคับสีพื้นหลังของแอปทั้งหมดให้เป็น Dark Mode (#0e1117) */
-        html, body, .stApp, [data-testid="stAppViewContainer"] {
-            background-color: #0e1117 !important;
-            color: #ffffff !important;
-        }
-        
-        /* บังคับสีพื้นหลังของ Header ให้โปร่งใส */
-        header[data-testid="stHeader"] {
-            background-color: transparent !important;
-        }
-        
-        /* บังคับสีพื้นหลัง Sidebar ให้เป็นสีมืด (#161b22) */
-        [data-testid="stSidebar"] {
-            background-color: #161b22 !important;
-            border-right: 1px solid #30363d !important;
-        }
-        
-        /* สีไอคอนลูกศรเปิด-ปิด Sidebar (<< และ >>) ให้เป็นสีเหลืองทองชัดเจน */
+        /* ตกแต่งปุ่มเปิด-ปิด Sidebar ให้สวยงามและมองเห็นชัดเจนทุกโหมด */
         [data-testid="collapsedControl"] svg,
         [data-testid="stSidebarCollapseButton"] svg {
             fill: #F0B90B !important;
             color: #F0B90B !important;
-        }
-        
-        /* บังคับสีตัวอักษร หัวข้อ และข้อความทั่วไปให้เป็นสีขาว */
-        h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
-            color: #ffffff !important;
-        }
-        
-        /* ปรับสไตล์กล่องอัปโหลดไฟล์ (File Uploader) */
-        [data-testid="stFileUploader"] {
-            background-color: #161b22 !important;
-            border: 1px solid #30363d !important;
-            border-radius: 8px !important;
-        }
-        [data-testid="stFileUploader"] section {
-            background-color: #0e1117 !important;
-        }
-        
-        /* ปรับสไตล์กล่อง DataFrame และ Expander */
-        [data-testid="stExpander"], [data-testid="stDataFrame"] {
-            background-color: #161b22 !important;
-            border: 1px solid #30363d !important;
-            border-radius: 8px !important;
-        }
-        [data-testid="stExpander"] details summary {
-            background-color: #21262d !important;
-            color: #ffffff !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -87,7 +44,7 @@ uploaded_files = st.sidebar.file_uploader(
 
 st.title("🏭 Recorder NB3 Furnace")
 
-# 4. Flexible File Parsing Function
+# 4. Flexible File Parsing Function พร้อมระบบตรวจเช็คไฟล์ RECORDER NB3
 def parse_single_file(uploaded_file):
     uploaded_file.seek(0)
     raw_bytes = uploaded_file.read()
@@ -105,6 +62,17 @@ def parse_single_file(uploaded_file):
         text_content = raw_bytes.decode('utf-8', errors='ignore')
 
     lines = text_content.splitlines()
+    
+    # 🔍 ตรวจสอบเบื้องต้นว่าเป็นไฟล์ RECORDER NB3 หรือไม่
+    is_nb3_file = False
+    for line in lines[:50]:  # ตรวจสอบ 50 บรรทัดแรก
+        if "#EndHeader" in line or "TH_CH" in line or "Recorder" in line:
+            is_nb3_file = True
+            break
+
+    if not is_nb3_file:
+        return None  # คืนค่า None เพื่อแจ้งเตือนว่าไม่ใช่ไฟล์ NB3
+
     endheader_cols = []
     data_rows = []
     
@@ -195,11 +163,21 @@ def parse_single_file(uploaded_file):
 
 def process_multiple_files(uploaded_files):
     combined_dfs = []
+    invalid_files = []
+
     for file in uploaded_files:
         single_df = parse_single_file(file)
-        if not single_df.empty:
+        if single_df is None:
+            invalid_files.append(file.name)
+        elif not single_df.empty:
             combined_dfs.append(single_df)
-    
+
+    # หากพบไฟล์ที่ไม่ถูกต้อง ให้แจ้งเตือนและหยุดการทำงาน
+    if invalid_files:
+        invalid_file_names = ", ".join(f"'{name}'" for name in invalid_files)
+        st.error(f"⚠️ พบไฟล์ที่ไม่ถูกต้อง: {invalid_file_names}\n\nไฟล์ดังกล่าวไม่ใช่ข้อมูลของ **RECORDER NB3** กรุณาตรวจสอบและอัปโหลดไฟล์ใหม่อีกครั้ง")
+        st.stop()  # หยุดการทำงานทันที
+
     if not combined_dfs:
         return pd.DataFrame()
 
@@ -217,19 +195,12 @@ def to_excel_bytes(dataframe):
     output.seek(0)
     return output.getvalue()
 
-# 5. Industrial Dark Chart Layout Styling
+# 5. Chart Layout Styling (ยืดหยุ่น รองรับการสลับโหมดอัตโนมัติ)
 def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
     layout_args = dict(
-        template="plotly_dark",
-        plot_bgcolor="#161b22",
-        paper_bgcolor="#0e1117",
         hovermode="x unified",
         showlegend=True,
         legend=dict(
-            font=dict(color="#FFFFFF", size=12, family="Arial Bold"),
-            bgcolor="rgba(22, 27, 34, 0.95)",
-            bordercolor="#F0B90B",
-            borderwidth=1.5,
             orientation="v",
             yanchor="top",
             y=1,
@@ -237,20 +208,14 @@ def apply_industrial_style(fig, y_title, y_range=None, is_dual_axis=False):
             x=1.02
         ),
         xaxis=dict(
-            title=dict(text="Date & Time", font=dict(color="#FFFFFF", size=12)),
-            tickfont=dict(color="#CCCCCC", size=10),
+            title=dict(text="Date & Time"),
             showgrid=True,
-            gridcolor="rgba(255,255,255,0.08)",
-            linecolor="#555555",
             type="date",
         ),
         yaxis=dict(
-            title=dict(text=y_title, font=dict(color="#FFFFFF", size=12)),
-            tickfont=dict(color="#CCCCCC", size=10),
+            title=dict(text=y_title),
             showgrid=True,
-            gridcolor="rgba(255,255,255,0.08)",
             zeroline=False,
-            linecolor="#555555",
         ),
         height=420,
         margin=dict(l=60, r=180, t=30, b=40),
@@ -303,26 +268,26 @@ if uploaded_files:
                         line=dict(color=top_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig1, "Temperature (°C)")
-                st.plotly_chart(fig1, use_container_width=True)
+                st.plotly_chart(fig1, use_container_width=True, theme="streamlit")
 
             # 2. Bottom Zone Temp (#1 - #7)
             if show_g2:
                 st.subheader("2) Bottom Zone Temperature (#1 to #7)")
                 fig2 = go.Figure()
-                bottom_colors = ["#E0FFFF", "#FF1493", "#808080", "#00FF00", "#008000", "#0000FF", "#8A2BE2"]
+                bottom_colors = ["#00BFFF", "#FF1493", "#808080", "#00FF00", "#008000", "#0000FF", "#8A2BE2"]
                 for i in range(1, 8):
                     fig2.add_trace(go.Scatter(
                         x=df["DateTime"], y=df[f"Bottom Zone #{i}"], name=f"Bottom Zone #{i}", mode="lines", 
                         line=dict(color=bottom_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig2, "Temperature (°C)")
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, use_container_width=True, theme="streamlit")
 
             # 3. DRYOFF1-3
             if show_g3:
                 st.subheader("3) DRYOFF Temperature (DRYOFF1 to DRYOFF3)")
                 fig3 = go.Figure()
-                dry_colors = ["#FFA500", "#9ACD32", "#00ECFF"]
+                dry_colors = ["#FFA500", "#9ACD32", "#008B8B"]
                 dryoff_names = ["DRYOFF1", "DRYOFF2", "DRYOFF3"]
                 for i in range(1, 4):
                     fig3.add_trace(go.Scatter(
@@ -330,7 +295,7 @@ if uploaded_files:
                         line=dict(color=dry_colors[i-1], width=2)
                     ))
                 apply_industrial_style(fig3, "Temperature (°C)")
-                st.plotly_chart(fig3, use_container_width=True)
+                st.plotly_chart(fig3, use_container_width=True, theme="streamlit")
 
             # 4. ppm Oxygen & N2 Flow Rate (Dual Axis)
             if show_g4:
@@ -339,7 +304,7 @@ if uploaded_files:
                 
                 fig4.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["Oxygen EXIT"], name="Oxygen EXIT", mode="lines", 
-                    line=dict(color="#FF80FF", width=2)
+                    line=dict(color="#FF00FF", width=2)
                 ), secondary_y=False)
                 
                 fig4.add_trace(go.Scatter(
@@ -349,28 +314,27 @@ if uploaded_files:
 
                 fig4.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["N2 Exit"], name="N2 Exit", mode="lines", 
-                    line=dict(color="#ADD8E6", width=2, dash="dash")
+                    line=dict(color="#1f77b4", width=2, dash="dash")
                 ), secondary_y=True)
 
                 fig4.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["N2 Entrance"], name="N2 Entrance", mode="lines", 
-                    line=dict(color="#00FF00", width=2, dash="dash")
+                    line=dict(color="#2ca02c", width=2, dash="dash")
                 ), secondary_y=True)
 
                 apply_industrial_style(fig4, "Oxygen Level (ppm)", is_dual_axis=True)
                 
                 fig4.update_layout(
                     yaxis=dict(
-                        title=dict(text="Oxygen Level (ppm) [0-200]", font=dict(color="#FFFFFF", size=12)),
-                        range=[0, 200], showgrid=True, gridcolor="rgba(255,255,255,0.08)"
+                        title=dict(text="Oxygen Level (ppm) [0-200]"),
+                        range=[0, 200], showgrid=True
                     ),
                     yaxis2=dict(
-                        title=dict(text="N2 Flow Rate [0-1000]", font=dict(color="#ADD8E6", size=12)),
-                        tickfont=dict(color="#ADD8E6", size=10),
-                        showgrid=False, overlaying="y", side="right", linecolor="#ADD8E6", range=[0, 1000]
+                        title=dict(text="N2 Flow Rate [0-1000]"),
+                        showgrid=False, overlaying="y", side="right", range=[0, 1000]
                     )
                 )
-                st.plotly_chart(fig4, use_container_width=True)
+                st.plotly_chart(fig4, use_container_width=True, theme="streamlit")
 
             # 5. Cool Water Temp
             if show_g5:
@@ -378,10 +342,10 @@ if uploaded_files:
                 fig5 = go.Figure()
                 fig5.add_trace(go.Scatter(
                     x=df["DateTime"], y=df["COOL WATER TEMP"], name="COOL WATER TEMP", mode="lines", 
-                    line=dict(color="#00ecff", width=2)
+                    line=dict(color="#008B8B", width=2)
                 ))
                 apply_industrial_style(fig5, "Cool Water Temp (°C)", y_range=[-150, 500])
-                st.plotly_chart(fig5, use_container_width=True)
+                st.plotly_chart(fig5, use_container_width=True, theme="streamlit")
 
             # Download Excel Section
             with st.expander("📊 ตรวจสอบและเลือกดาวน์โหลดตารางข้อมูล Excel (.xlsx)"):

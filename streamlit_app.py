@@ -13,23 +13,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Dark Mode CSS (ปรับปรุงการแสดงผลปุ่ม Sidebar)
+# 2. Dark Mode CSS (แก้ปัญหาปุ่ม Sidebar หายเด็ดขาด)
 st.markdown("""
     <style>
-        /* ตั้งค่า Header ให้โปร่งใส โดยไม่ซ่อนการแสดงผลทั้งหมด เพื่อให้ปุ่มลูกศรทำงานได้ */
-        header[data-testid="stHeader"] {
+        /* ทำให้แถบ Header ด้านบนโปร่งใส */
+        [data-testid="stHeader"] {
             background-color: transparent !important;
         }
         
-        /* ซ่อนเฉพาะแถบเมนูด้านขวา (Deploy, Settings, etc.) */
+        /* ซ่อนเฉพาะแถบเมนูด้านขวา (Deploy, Settings) */
         [data-testid="stToolbar"] {
             display: none !important;
         }
         
-        /* ซ่อนลายน้ำและเมนูเพิ่มเติมที่อาจจะติดมา */
+        /* บังคับให้ปุ่มลูกศร (เปิด-ปิด Sidebar) แสดงผลและอยู่หน้าสุดเสมอ */
+        [data-testid="collapsedControl"] {
+            display: flex !important;
+            z-index: 999999 !important;
+        }
+        
+        /* ซ่อนเมนูหลักและฟุตเตอร์ */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
+        /* ตั้งค่าสีพื้นหลังหลัก */
         html, body, .stApp, [data-testid="stAppViewContainer"] {
             background-color: #0e1117 !important;
             color: #ffffff !important;
